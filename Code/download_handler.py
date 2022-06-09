@@ -1,6 +1,8 @@
 import tweepy
+from tweepy.parsers import JSONParser
 import configparser
 import pandas
+import json
 from datetime import datetime
 
 
@@ -29,7 +31,6 @@ class DownloadHandler:
         self.api_key_secret = config["twitter"]["api_key_secret"]
         self.access_token = config["twitter"]["access_token"]
         self.access_token_secret = config["twitter"]["access_token_secret"]
-        self.bearer_token = config["twitter"]["bearer_token"]
 
     def create_api_interface(self):
         """ Uses authentication details to create an API interface.
@@ -39,42 +40,42 @@ class DownloadHandler:
         authentication.set_access_token(self.access_token, self.access_token_secret)
 
         # Create API interface
-        self.api = tweepy.API(authentication)
+        self.api = tweepy.API(authentication, parser=tweepy.parsers.JSONParser())
 
-    def get_recent_tweets(self, query):
+    def get_tweets(self, query, until=None):
         """ Method to download the recent tweets.
         """
-        # Create client
-        client = tweepy.Client(bearer_token=self.bearer_token)
 
-        response = client.search_recent_tweets(query=query, tweet_fields=["created_at"])
-        # Format the data
-        tweet_data = []
-        for tweet in response.data:
-            text = tweet.text.strip()
-            tweet_data.append([tweet.created_at, text])
+        if until == None:
+            response = self.api.search_tweets(q=query)
+        else:
+            response = self.api.search_tweets(q=query, until=until)
 
-        return tweet_data
+        json.dumps(response)
+        tweet_list = []
+        for tweet in response["statuses"]:
+            tweet_list.append(tweet)
+
+        return tweet_list
 
     @staticmethod
-    def save_tweets(tweets, columns):
+    def save_tweets(tweets):
         """ Method to store input tweets in a csv file.
         """
-        data_frame = pandas.DataFrame(tweets, columns=columns)
+        data_frame = pandas.DataFrame.from_records(tweets)
 
         time = datetime.now().strftime("%d-%m-%Y_%H-%M")
-        data_frame.to_csv("Data/tweets_" + time + ".csv")
+        data_frame.to_csv("Data/tweets_" + time + ".csv", encoding='utf-8')
 
 
 def main():
+    query = "(Deutsche Bahn) OR Bahn OR @DB OR #DeutscheBahn OR (9 Euro Ticket) OR (#9EuroTicket)"
+
     download_handler = DownloadHandler()
     download_handler.read_config_file("Data/config.ini")
     download_handler.create_api_interface()
-
-    query = "@DB OR Deutsche Bahn OR Die Bahn -is:retweet"
-    tweets = download_handler.get_recent_tweets(query)
-    columns = ["Time", "Tweet"]
-    download_handler.save_tweets(tweets, columns)
+    tweets = download_handler.get_tweets(query)
+    download_handler.save_tweets(tweets)
 
 
 if __name__ == '__main__':
