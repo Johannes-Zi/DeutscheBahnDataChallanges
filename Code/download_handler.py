@@ -70,6 +70,7 @@ class DownloadHandler:
 
 def main():
 
+    # Query definition
     query_nine_euro_de = "((#9EuroTicket) OR (#NeunEuroTicket) OR (Neun-Euro-Ticket) OR (9 Euro Ticket)) lang:de"
     query_nine_euro_en = "((#9EuroTicket) OR (#NeunEuroTicket) OR (Neun-Euro-Ticket) OR (9 Euro Ticket)) lang:en"
     query_db_general_de = "(@DB_Bahn OR @DB_Info OR @DB_Presse OR (Deutsche Bahn) OR (#DeutscheBahn) OR " \
