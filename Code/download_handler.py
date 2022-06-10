@@ -62,25 +62,20 @@ class DownloadHandler:
                                                place_fields=["id", "contained_within", "geo", "name", "place_type"])"""
 
 
-    # Ich glaube mit Paginator kann man auf die user_fileds us zugreifen
+        # Ich glaube mit Paginator kann man auf die user_fileds us zugreifen
         """for tweet in tweepy.Paginator(client.search_recent_tweets, "Tweepy",
                                       max_results=100).flatten(limit=250):
             print(tweet.id)"""
 
-        response = client.search_recent_tweets(query=query, max_results=10,
+        response = client.search_recent_tweets(query=query, max_results=20,
                                                expansions=["author_id"],
-                                               tweet_fields=["source"],
+                                               tweet_fields=["source", "entities"],
                                                user_fields=["public_metrics"],
                                                place_fields=["place_type"])
         # Format the data
         tweet_data = []
 
         # Wie hier auf tweet field zugreifen user.data geht ja nicht, verstehe expansions und includes nicht ganz
-
-        temp = dir(response.includes)
-
-        print(temp)
-        exit()
 
         for tweet in response.data:
             # Extract relevant data
@@ -91,7 +86,10 @@ class DownloadHandler:
             """attributes = dir(tweet)
             print(attributes)
             exit()"""
-            tweet_data.append([tweet.public_metrics])
+            print("#############")
+            print(tweet.text.strip())
+            #print(tweet.entities)
+            #tweet_data.append([tweet.public_metrics])
 
         return tweet_data
 
@@ -113,9 +111,22 @@ def main():
     download_handler.create_api_interface()
 
     query = "@DB OR Deutsche Bahn OR Die Bahn -is:retweet"      # excludes retweets
-    tweets = download_handler.get_recent_tweets(query)
-    for x in tweets:
-        print(x)
+
+    # -RT to exclude the russian Trolls (serious problem)
+    query_nine_euro_de = "(#9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR #NeunEuroTickets OR neun-euro-ticket " \
+                         "OR neun-euro-tickets OR (9 euro ticket) OR (9 euro tickets)) lang:de -RT"
+    query_nine_euro_en = "(#9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR #NeunEuroTickets OR neun-euro-ticket " \
+                         "OR neun-euro-tickets OR (9 euro ticket) OR (9 euro tickets)) lang:en -RT"
+    query_db_general_de = "((@DB_Bahn OR @DB_Info OR @DB_Presse OR (deutsche bahn) OR #DeutscheBahn OR " \
+                          "#DBNavigator) -(RT OR #9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR " \
+                          "#NeunEuroTickets OR #9euro OR neun-euro OR (9 euro) OR 9€)) lang:de"
+    query_db_general_en = "((@DB_Bahn OR @DB_Info OR @DB_Presse OR (deutsche bahn) OR #DeutscheBahn OR " \
+                          "#DBNavigator) -(RT OR #9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR " \
+                          "#NeunEuroTickets OR #9euro OR neun-euro OR (9 euro) OR 9€)) lang:en"
+    test_query = "deutsche bahn lang:en"
+
+    tweets = download_handler.get_recent_tweets(query_nine_euro_en)
+
     columns = ["Time", "Tweet"]
     #download_handler.save_tweets(tweets, columns)
 
