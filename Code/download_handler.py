@@ -69,7 +69,13 @@ class DownloadHandler:
 
 
 def main():
-    query = "(Deutsche Bahn) OR Bahn OR @DB OR #DeutscheBahn OR (9 Euro Ticket) OR (#9EuroTicket)"
+
+    query_nine_euro_de = "((#9EuroTicket) OR (#NeunEuroTicket) OR (Neun-Euro-Ticket) OR (9 Euro Ticket)) lang:de"
+    query_nine_euro_en = "((#9EuroTicket) OR (#NeunEuroTicket) OR (Neun-Euro-Ticket) OR (9 Euro Ticket)) lang:en"
+    query_db_general_de = "(@DB_Bahn OR @DB_Info OR @DB_Presse OR (Deutsche Bahn) OR (#DeutscheBahn) OR " \
+                          "(#DBNavigator)) lang:de"
+    query_db_general_en = "(@DB_Bahn OR @DB_Info OR @DB_Presse OR (Deutsche Bahn) OR (#DeutscheBahn) OR " \
+                          "(#DBNavigator)) lang:en"
 
     download_handler = DownloadHandler()
     download_handler.read_config_file("Data/config.ini")
