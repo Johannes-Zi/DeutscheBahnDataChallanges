@@ -62,21 +62,30 @@ class DownloadHandler:
                                                place_fields=["place_type", "geo", "id", "name", "country_code"],
                                                expansions=["author_id", "geo.place_id"])
 
-        tweet_data = []
-
         # Define dictionary with  users in list from the includes object
         users = {u["id"]: u for u in response.includes["users"]}
 
         # There has to be at least one tweet with geo info
         # Dict out of list of places from includes object
-        try:
+        if "places" in response.includes:
             places = {p["id"]: p for p in response.includes["places"]}
-        except KeyError:
-            corrent_batch_without_geodata = True
+
+        tweet_data = []     # Stores data of all tweets
 
         # Extract data
         for tweet in response.data:
 
+            # Checks if hashtags data is availiable:
+            if tweet.entities and "hashtags" in tweet.entities:
+                hashtag_data = tweet.entities["hashtags"]
+            else:
+                hashtag_data = None
+
+            # Create list with data of current tweet
+            current_tweet_data = [tweet.id, tweet.created_at, tweet.text.strip().replace("\n", " "), tweet.source,
+                                  tweet.public_metrics["retweet_count"], tweet.public_metrics["reply_count"],
+                                  tweet.public_metrics["like_count"], tweet.public_metrics["quote_count"],
+                                  hashtag_data, tweet.lang]
             # Extract tweet data
             if verbosefunc:
                 print("###############################################\n###############################################")
@@ -92,6 +101,9 @@ class DownloadHandler:
             if users[tweet.author_id]:  # Extract user data
                 user = users[tweet.author_id]
 
+                # Append user data to current tweet data
+                current_tweet_data += [user.id, user.name, user.location, user.created_at]
+
                 if verbosefunc:
                     print("##### User object data #####")
                     print("user.id", user.id)
@@ -103,17 +115,29 @@ class DownloadHandler:
                 if places[tweet.geo["place_id"]]:
                     place = places[tweet.geo["place_id"]]
 
+                    current_tweet_data += [place.id, place.name, place.country_code, place.geo, place.place_type]
+
                     if verbosefunc:
-                        print("##### Geo object date #####")
+                        print("##### Geo object data #####")
                         print("place.id", place.id)
                         print("place.name", place.name)
                         print("place.country_code", place.country_code)
                         print("place.geo", place.geo)
-                        print("place.place_type", place.place_type)
+                        print("place.place_type", place.place_type, "\n")
 
-            print("\n")
+            # Append empty element when there is no geo data
+            else:
+                current_tweet_data += [None, None, None, None, None]
 
-        exit()
+            print(current_tweet_data)
+            # Format elements to list and replace potential false separators
+            current_tweet_data = list(map(lambda x: x.replace("$", "€"), list(map(str, current_tweet_data))))
+
+            print(current_tweet_data)
+            # Append formatted tweet data to final list
+            tweet_data.append(current_tweet_data)
+
+        # zum testen all position mit $ printen +-10 Positionen um zu schauen ob man vlt was wichtiges raus kickt
 
         return tweet_data
 
@@ -124,7 +148,7 @@ class DownloadHandler:
         data_frame = pandas.DataFrame(tweets, columns=columns)
 
         time = datetime.now().strftime("%d-%m-%Y_%H-%M")
-        data_frame.to_csv("Data/tweets_" + time + ".csv")
+        data_frame.to_csv("Data/tweets_" + time + ".csv", sep="$")
 
 
 def main():
@@ -147,8 +171,12 @@ def main():
 
     tweets = download_handler.get_recent_tweets(query_nine_euro, True)
 
-    columns = ["Time", "Tweet"]
-    #download_handler.save_tweets(tweets, columns)
+    columns = ["tweet.id", "tweet.created_at", "tweet.text", "tweet.source", "tweet.retweet_count", "tweet.reply_count",
+               "tweet.like_count", "tweet.quote_count", "tweet.hashtags", "tweet.lang", "user.id", "user.name",
+               "user.location", "user.created_at", "place.id", "place.name", "place.country_code", "place.geo",
+               "place.place_type"]
+
+    download_handler.save_tweets(tweets, columns)
 
 
 if __name__ == '__main__':
