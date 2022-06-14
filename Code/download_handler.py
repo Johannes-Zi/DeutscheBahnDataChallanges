@@ -48,95 +48,72 @@ class DownloadHandler:
         # Create API interface
         self.api = tweepy.API(authentication)
 
-    def get_recent_tweets(self, query):
+    def get_recent_tweets(self, query, verbosefunc):
         """ Method to download the recent tweets.
         """
-        # Create client
+        # Start client
         client = tweepy.Client(bearer_token=self.bearer_token)
 
-        # Die folgenden Daten sollten wir für jeden tweet speichern, den unteschied zwischen tweet geo und place geo hab
-        # ich noch nicht ganz verstanden
-        """response = client.search_recent_tweets(query=query, max_results=10,
-                                               tweet_fields=["id", "created_at", "author_id", "text", "entities", "geo",
-                                                             "in_reply_to_user_id", "lang", "possibly_sensitive",
-                                                             "public_metrics", "source"],
-                                               user_fields=["id", "created_at", "location", "public_metrics"],
-                                               place_fields=["id", "contained_within", "geo", "name", "place_type"])"""
-
-
-        # Ich glaube mit Paginator kann man auf die user_fileds us zugreifen
-        """for tweet in tweepy.Paginator(client.search_recent_tweets, "Tweepy",
-                                      max_results=100).flatten(limit=250):
-            print(tweet.id)"""
-
-        """response = client.search_recent_tweets(query=query, max_results=10,
-                                               expansions=["author_id", "media_keys", "place_id"],
-                                               tweet_fields=["source", "entities"],
-                                               user_fields=["public_metrics"],
-                                               place_fields=["place_type"])"""
-
-        response = client.search_recent_tweets(query=query, max_results=20,
-                                               tweet_fields=["source", "lang", "geo"],
-                                               user_fields=["id", "public_metrics", "location"],
-                                               place_fields=["geo"],
+        # Retrieve queries
+        response = client.search_recent_tweets(query=query, max_results=10,
+                                               tweet_fields=["id", "created_at", "text", "source", "public_metrics",
+                                                             "entities", "lang", "geo"],
+                                               user_fields=["id", "name", "location", "created_at"],
+                                               place_fields=["place_type", "geo", "id", "name", "country_code"],
                                                expansions=["author_id", "geo.place_id"])
 
         tweet_data = []
 
-
-        # mit Paginator kann ma mehr als 100 Tweets auf einmal ziehen
-
         # Define dictionary with  users in list from the includes object
-        users = {u["id"]: u for u in response.includes['users']}
+        users = {u["id"]: u for u in response.includes["users"]}
 
+        # There has to be at least one tweet with geo info
         # Dict out of list of places from includes object
-        places = {p["id"]: p for p in response.includes['places']}
+        try:
+            places = {p["id"]: p for p in response.includes["places"]}
+        except KeyError:
+            corrent_batch_without_geodata = True
 
         # Extract data
         for tweet in response.data:
-            print("###########")
-            print(tweet.author_id)
-            print(tweet.text.strip())
 
-            if users[tweet.author_id]:
+            # Extract tweet data
+            if verbosefunc:
+                print("###############################################\n###############################################")
+                print("##### Tweet object data #####")
+                print("tweet.id: ", tweet.id)
+                print("tweet.created_at", tweet.created_at)
+                print("tweet.text.strip()", tweet.text.strip())
+                print("tweet.source", tweet.source)
+                print("tweet.public_metrics", tweet.public_metrics)
+                print("tweet.entities", tweet.entities)
+                print("tweet.lang", tweet.lang, "\n")
+
+            if users[tweet.author_id]:  # Extract user data
                 user = users[tweet.author_id]
-                print(user.id)
-                #print(user.geo)
+
+                if verbosefunc:
+                    print("##### User object data #####")
+                    print("user.id", user.id)
+                    print("user.name", user.name)
+                    print("user.location", user.location)
+                    print("user.created_at", user.created_at, "\n")
 
             if tweet.geo:   # Not all tweets have geo data
-                print("### Has geo")
-                if places[tweet.geo['place_id']]:
-                    place = places[tweet.geo['place_id']]
-                    print(place.geo)
+                if places[tweet.geo["place_id"]]:
+                    place = places[tweet.geo["place_id"]]
+
+                    if verbosefunc:
+                        print("##### Geo object date #####")
+                        print("place.id", place.id)
+                        print("place.name", place.name)
+                        print("place.country_code", place.country_code)
+                        print("place.geo", place.geo)
+                        print("place.place_type", place.place_type)
 
             print("\n")
 
         exit()
-
-        for tweet in response.data:
-            # Extract relevant data
-            """tweet_data.append([tweet.id, tweet.created_at, tweet.author_id, tweet.text.strip(), tweet.entities,
-                               tweet.geo, tweet.in_reply_to_user_id, tweet.lang, tweet.possibly_sensitive,
-                               tweet.public_metrics, tweet.source])
-
-            attributes = dir(tweet)
-            print(attributes)
-            exit()"""
-            print("#############")
-            print(tweet.text.strip())
-            print(tweet.lang)
-            #print(tweet.entities)
-            #tweet_data.append([tweet.public_metrics])
-
-        print("XXXXXXXXXXXXXXXXXXXXXX")
-
-        """attributes = dir(response.includes)
-        print(attributes)
-        exit()"""
-
-
-        for users in response.includes:
-            print(users)
 
         return tweet_data
 
@@ -160,19 +137,15 @@ def main():
     query = "@DB OR Deutsche Bahn OR Die Bahn -is:retweet"      # excludes retweets
 
     # -RT to exclude the russian Trolls (serious problem)
-    query_nine_euro_de = "(#9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR #NeunEuroTickets OR neun-euro-ticket " \
-                         "OR neun-euro-tickets OR (9 euro ticket) OR (9 euro tickets)) lang:de -RT"
-    query_nine_euro_en = "(#9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR #NeunEuroTickets OR neun-euro-ticket " \
-                         "OR neun-euro-tickets OR (9 euro ticket) OR (9 euro tickets)) lang:en -RT"
-    query_db_general_de = "((@DB_Bahn OR @DB_Info OR @DB_Presse OR (deutsche bahn) OR #DeutscheBahn OR " \
-                          "#DBNavigator) -(RT OR #9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR " \
-                          "#NeunEuroTickets OR #9euro OR neun-euro OR (9 euro) OR 9€)) lang:de"
-    query_db_general_en = "((@DB_Bahn OR @DB_Info OR @DB_Presse OR (deutsche bahn) OR #DeutscheBahn OR " \
-                          "#DBNavigator) -(RT OR #9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR " \
-                          "#NeunEuroTickets OR #9euro OR neun-euro OR (9 euro) OR 9€)) lang:en"
+    query_nine_euro = "(#9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR #NeunEuroTickets OR neun-euro-ticket OR" \
+                      " neun-euro-tickets OR (9 euro ticket) OR (9 euro tickets)) (lang:en OR lang:de) -RT"
+    query_db_general = "((@DB_Bahn OR @DB_Info OR @DB_Presse OR (deutsche bahn) OR #DeutscheBahn OR #DBNavigator) " \
+                       "-(RT OR #9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR #NeunEuroTickets OR #9euro OR " \
+                       "neun-euro OR (9 euro) OR 9€)) (lang:de OR lang:en)"
+
     test_query = "deutsche bahn lang:en"
 
-    tweets = download_handler.get_recent_tweets(query_nine_euro_en)
+    tweets = download_handler.get_recent_tweets(query_nine_euro, True)
 
     columns = ["Time", "Tweet"]
     #download_handler.save_tweets(tweets, columns)
