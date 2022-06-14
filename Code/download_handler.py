@@ -1,3 +1,5 @@
+import json
+
 import tweepy
 import configparser
 import pandas
@@ -67,29 +69,74 @@ class DownloadHandler:
                                       max_results=100).flatten(limit=250):
             print(tweet.id)"""
 
-        response = client.search_recent_tweets(query=query, max_results=20,
-                                               expansions=["author_id"],
+        """response = client.search_recent_tweets(query=query, max_results=10,
+                                               expansions=["author_id", "media_keys", "place_id"],
                                                tweet_fields=["source", "entities"],
                                                user_fields=["public_metrics"],
-                                               place_fields=["place_type"])
-        # Format the data
+                                               place_fields=["place_type"])"""
+
+        response = client.search_recent_tweets(query=query, max_results=20,
+                                               tweet_fields=["source", "lang", "geo"],
+                                               user_fields=["id", "public_metrics", "location"],
+                                               place_fields=["geo"],
+                                               expansions=["author_id", "geo.place_id"])
+
         tweet_data = []
 
-        # Wie hier auf tweet field zugreifen user.data geht ja nicht, verstehe expansions und includes nicht ganz
+
+        # mit Paginator kann ma mehr als 100 Tweets auf einmal ziehen
+
+        # Define dictionary with  users in list from the includes object
+        users = {u["id"]: u for u in response.includes['users']}
+
+        # Dict out of list of places from includes object
+        places = {p["id"]: p for p in response.includes['places']}
+
+        # Extract data
+        for tweet in response.data:
+            print("###########")
+            print(tweet.author_id)
+            print(tweet.text.strip())
+
+            if users[tweet.author_id]:
+                user = users[tweet.author_id]
+                print(user.id)
+                #print(user.geo)
+
+            if tweet.geo:   # Not all tweets have geo data
+                print("### Has geo")
+                if places[tweet.geo['place_id']]:
+                    place = places[tweet.geo['place_id']]
+                    print(place.geo)
+
+            print("\n")
+
+        exit()
 
         for tweet in response.data:
             # Extract relevant data
             """tweet_data.append([tweet.id, tweet.created_at, tweet.author_id, tweet.text.strip(), tweet.entities,
                                tweet.geo, tweet.in_reply_to_user_id, tweet.lang, tweet.possibly_sensitive,
-                               tweet.public_metrics, tweet.source])"""
+                               tweet.public_metrics, tweet.source])
 
-            """attributes = dir(tweet)
+            attributes = dir(tweet)
             print(attributes)
             exit()"""
             print("#############")
             print(tweet.text.strip())
+            print(tweet.lang)
             #print(tweet.entities)
             #tweet_data.append([tweet.public_metrics])
+
+        print("XXXXXXXXXXXXXXXXXXXXXX")
+
+        """attributes = dir(response.includes)
+        print(attributes)
+        exit()"""
+
+
+        for users in response.includes:
+            print(users)
 
         return tweet_data
 
