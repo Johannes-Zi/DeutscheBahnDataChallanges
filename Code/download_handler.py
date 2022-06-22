@@ -4,6 +4,9 @@ import tweepy
 import configparser
 import pandas
 import os
+#import geopandas as gpd
+#import descartes
+import glob
 from datetime import datetime
 #import logging
 
@@ -98,7 +101,6 @@ class DownloadHandler:
         else:
             batch_list.append([0, len(tweet_ids)])
 
-
         # Iterate trough the tweet ids
         tweet_data = []  # Stores data of all tweets
         for current_batch in batch_list:
@@ -183,8 +185,6 @@ class DownloadHandler:
                 # Append formatted tweet data to final list
                 tweet_data.append(current_tweet_data)
 
-        # zum testen all position mit $ printen +-10 Positionen um zu schauen ob man vlt was wichtiges raus kickt
-
         print(len(tweet_data))
 
         return tweet_data
@@ -197,6 +197,26 @@ class DownloadHandler:
 
         time = datetime.now().strftime("%d-%m-%Y_%H-%M")
         data_frame.to_csv("Data/tweets_" + time + ".csv", sep="$")
+
+
+class DataProcessing:
+    """
+    imports, filter and save data in geopandas dataframes
+    """
+
+    def __init__(self):
+        """
+        Constructor
+        """
+        self.dataframe = None
+        self.input_directory = None
+
+    def read_in_storage_directory(self, input_dir_path):
+        # Get all relevant files that are stored in the input dir
+        # Returns every file in the directory with .out at the end
+        input_file_list = glob.glob(input_dir_path + "/tweets_*.csv")
+
+        # Save file data in combined dataframe
 
 
 def main():
@@ -217,7 +237,7 @@ def main():
 
     test_query = "deutsche bahn lang:en"
 
-    tweets = download_handler.get_recent_tweets(query_nine_euro, False, False, 8950)
+    tweets = download_handler.get_recent_tweets(query_db_general, False, True, 13300)
 
     columns = ["tweet.id", "tweet.created_at", "tweet.text", "tweet.source", "tweet.retweet_count", "tweet.reply_count",
                "tweet.like_count", "tweet.quote_count", "tweet.hashtags", "tweet.lang", "user.id", "user.name",
