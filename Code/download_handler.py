@@ -199,55 +199,6 @@ class DownloadHandler:
         data_frame.to_csv("Data/tweets_" + time + ".csv", sep="$")
 
 
-class DataProcessing:
-    """
-    imports, filter and save data in geopandas dataframes
-    """
-
-    def __init__(self):
-        """
-        Constructor
-        """
-        self.dataframe = None
-        self.input_directory = None
-        self.city_location_count = None
-        self.tweet_df = pd.DataFrame([])
-
-    def create_df_with_storage_data(self, input_dir_path):
-        # Get all relevant files that are stored in the input dir
-        # Returns every file in the directory with .out at the end
-        input_file_list = glob.glob(input_dir_path + "/tweets_*.csv")
-        pd.set_option('display.max_columns', None)  # prints all columns
-
-        self.city_location_count = 0     # Saves the number of tweets with city location data
-
-        temp = 0
-
-        # Read in tweet data from files
-        for current_file_path in input_file_list:
-            print("Current file path: ", current_file_path)
-
-            current_tweet_df = pd.read_csv(current_file_path, sep="$", index_col=0)
-            print(len(current_tweet_df))
-            temp += len(current_tweet_df)
-            print(sum(current_tweet_df["place.name"] != "None"))
-            print(sum(current_tweet_df["place.place_type"] == "city"))
-            self.tweet_df = pd.concat([self.tweet_df, current_tweet_df])
-
-        # Drop duplicates
-        print(self.tweet_df.head())
-        self.tweet_df = self.tweet_df.drop_duplicates(subset="tweet.id")
-        print("Test", len(self.tweet_df[self.tweet_df.index.duplicated()]))
-        print("Tweets with geo object: ", sum(self.tweet_df["place.name"] != "None"))
-        print("Tweets with city geo object: ", sum(self.tweet_df["place.place_type"] == "city"))
-        print(len(self.tweet_df))
-        self.city_location_count += sum(self.tweet_df["place.place_type"] == "city")
-
-        print(temp)
-
-        return self.tweet_df
-
-
 def main():
 
     """download_handler = DownloadHandler()
@@ -274,12 +225,6 @@ def main():
                "place.place_type"]
 
     download_handler.save_tweets(tweets, columns)"""
-
-    # Read in storage files
-    storage_dir_path = "/home/johannes/Desktop/tweet_data/"
-
-    tweet_processing = DataProcessing()
-    tweet_dataframe = tweet_processing.create_df_with_storage_data(storage_dir_path)
 
 
 if __name__ == '__main__':
