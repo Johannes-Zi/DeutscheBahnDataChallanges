@@ -104,8 +104,9 @@ class DataProcessing:
                 previous_pos = tweet_text_split[current_list_position - 1]
 
                 # Check if the key is a start position key
-                if ((previous_pos == "von") or (previous_pos == "Von") or (previous_pos == "from") or
-                                               (previous_pos == "From")) and current_list_position != 0:
+                if ((previous_pos == "von") or (previous_pos == "Von")
+                    or (previous_pos == "aus") or (previous_pos == "Aus") or (previous_pos == "from") or
+                                                  (previous_pos == "From")) and current_list_position != 0:
                     start_keys_list.append(current_word)
 
                 # Check if the key is an end position key
