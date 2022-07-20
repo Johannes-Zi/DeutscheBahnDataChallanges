@@ -54,7 +54,7 @@ class DownloadHandler:
     @staticmethod
     def verbose_function(data_object, print_type):
         """
-        Prints the requested tweet data for debugging
+        Prints the requested tweet data for debugging.
         :param data_object: tweet, user or place object of a pulled tweet
         :param print_type: set print type fitting to handed over data_object
         :return: None
