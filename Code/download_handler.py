@@ -317,7 +317,7 @@ def main():
 
     query = "@DB OR Deutsche Bahn OR Die Bahn -is:retweet"      # excludes retweets
 
-    # -RT to exclude the russian Trolls (serious problem)
+    # Retweets are excluded with -RT
     query_nine_euro = "(#9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR #NeunEuroTickets OR neun-euro-ticket OR" \
                       " neun-euro-tickets OR (9 euro ticket) OR (9 euro tickets)) (lang:en OR lang:de) -RT"
     query_db_general = "((@DB_Bahn OR @DB_Info OR @DB_Presse OR (deutsche bahn) OR #DeutscheBahn OR #DBNavigator) " \
@@ -335,7 +335,7 @@ def main():
 
     download_handler.save_tweets(tweets, columns)   # """
 
-    """# User history pull
+    # User history pull
     download_handler = DownloadHandler()
     key_location = "Data/config.ini"
     download_handler.read_config_file(key_location)
@@ -348,7 +348,7 @@ def main():
                "user.location", "user.created_at", "place.id", "place.name", "place.country_code", "place.geo",
                "place.place_type"]
 
-    download_handler.save_tweets(tweets, columns)  # """
+    #download_handler.save_tweets(tweets, columns)  # """
 
 
 if __name__ == '__main__':
