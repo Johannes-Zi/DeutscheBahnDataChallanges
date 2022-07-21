@@ -32,7 +32,7 @@ class DataProcessing:
 
         self.city_location_count = 0     # Saves the number of tweets with city location data
 
-        temp = 0
+        entry_count = 0
 
         # Read in tweet data from files
         for current_file_path in input_file_list:
@@ -40,7 +40,7 @@ class DataProcessing:
 
             current_tweet_df = pd.read_csv(current_file_path, sep="$", index_col=0)
             print(len(current_tweet_df))
-            temp += len(current_tweet_df)
+            entry_count += len(current_tweet_df)
             print(sum(current_tweet_df["place.name"] != "None"))
             print(sum(current_tweet_df["place.place_type"] == "city"))
             self.tweet_df = pd.concat([self.tweet_df, current_tweet_df])
@@ -54,7 +54,7 @@ class DataProcessing:
         print(len(self.tweet_df))
         self.city_location_count += sum(self.tweet_df["place.place_type"] == "city")
 
-        print(temp)
+        print("Counted csv entries (with duplicatiosn):", entry_count)
 
     def load_city_key_data(self, city_key_file_path):
         """
@@ -122,23 +122,33 @@ class DataProcessing:
 
         return start_keys_list, end_keys_list, isolated_keys_list
 
+    def extract_relevant_users(self):
+        """
+        Retrieves a complete tweet dataframe and extracts the user for which locations could be tagged.
+        :return:
+        """
+        return None
+
 
 def main():
     # Read in storage files
-    storage_dir_path = "/home/johannes/Desktop/tweet_data/"
+    #storage_dir_path = "/home/johannes/Desktop/tweet_data/"
+    storage_dir_path = "C://Users//19joh//Desktop//testdir//"
 
-    city_key_file_path = "C://Users//19joh//Desktop//deutschland_gemeinden_short.txt"
+    #city_key_file_path = "C://Users//19joh//Desktop//deutschland_gemeinden_short.txt"
 
     tweet_processing = DataProcessing()
-    tweet_processing.load_city_key_data(city_key_file_path)
+    #tweet_processing.load_city_key_data(city_key_file_path)
+
+    tweet_processing.create_df_with_storage_data(input_dir_path=storage_dir_path)
 
     #print(dict(list(tweet_processing.city_key_dict.items())[:20]))
-    print(tweet_processing.city_key_dict["München"])
+    """print(tweet_processing.city_key_dict["München"])
 
     teststring = "Ich reise heute von Berlin nach München. Obersinn ist auch schön. Auf nach #Sylt, #Burgsinn und " \
                  "Offenbach."
 
-    print(tweet_processing.text_city_key_extraction(teststring))
+    print(tweet_processing.text_city_key_extraction(teststring))"""
 
 
 if __name__ == '__main__':
