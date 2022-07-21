@@ -54,6 +54,8 @@ class DataProcessing:
 
         print("Tweets with geo object: ", sum(self.tweet_df["place.name"] != "None"))
         print("Tweets with city geo object: ", sum(self.tweet_df["place.place_type"] == "city"))
+        print(len(self.tweet_df))
+        self.city_location_count += sum(self.tweet_df["place.place_type"] == "city")
 
         print("length tweet.df", len(self.tweet_df))
 
