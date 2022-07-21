@@ -194,7 +194,6 @@ class DataProcessing:
         # Print specific index
         #print(self.short_tweet_df.loc[[3]])
 
-
         return None
 
     def save_user_ids_as_csv(self):
