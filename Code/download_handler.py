@@ -1,17 +1,8 @@
-import json
-
 import tweepy
+from tweepy.parsers import JSONParser
 import configparser
-import pandas as pd
-import os
-#import geopandas as gpd
-#import descartes
-import glob
+import json
 from datetime import datetime
-#import logging
-
-# Basic configuration
-#logging.basicConfig(level=logging.DEBUG)
 
 
 class DownloadHandler:
@@ -27,6 +18,11 @@ class DownloadHandler:
         self.access_token_secret = None
         self.bearer_token = None
         self.api = None
+
+        self.available = False
+        self.tweet_ids = []
+        self.tweet_batches = []
+        self.tweet_data = {}
 
     def read_config_file(self, path_to_file):
         """ Reads the config file.
@@ -49,306 +45,140 @@ class DownloadHandler:
         authentication.set_access_token(self.access_token, self.access_token_secret)
 
         # Create API interface
-        self.api = tweepy.API(authentication)
+        self.api = tweepy.API(authentication, parser=tweepy.parsers.JSONParser())
 
-    @staticmethod
-    def verbose_function(data_object, print_type):
+    def check_available(self, client, query):
+        """ Checks if new tweets are available.
         """
-        Prints the requested tweet data for debugging.
-        :param data_object: tweet, user or place object of a pulled tweet
-        :param print_type: set print type fitting to handed over data_object
-        :return: None
-        """
-        if print_type == "general":
-            print("###############################################\n###############################################")
-            print("##### Tweet object data #####")
-            print("tweet.id: ", data_object.id)
-            print("tweet.created_at", data_object.created_at)
-            print("tweet.text.strip()", data_object.text.strip())
-            print("tweet.source", data_object.source)
-            print("tweet.public_metrics", data_object.public_metrics)
-            print("tweet.entities", data_object.entities)
-            print("tweet.lang", data_object.lang, "\n")
 
-        if print_type == "user":
-            print("##### User object data #####")
-            print("user.id", data_object.id)
-            print("user.name", data_object.name)
-            print("user.location", data_object.location)
-            print("user.created_at", data_object.created_at, "\n")
+        # Finds all available tweets for the last 7 days
+        available_tweets = client.get_recent_tweets_count(query=query, granularity="day")
 
-        if print_type == "place":
-            print("##### Geo object data #####")
-            print("place.id", data_object.id)
-            print("place.name", data_object.name)
-            print("place.country_code", data_object.country_code)
-            print("place.geo", data_object.geo)
-            print("place.place_type", data_object.place_type, "\n")
+        # Adds all day count values up to one week count value
+        week_count = 0
+        for daily_count in available_tweets.data:
+            week_count += daily_count["tweet_count"]
 
-    def get_recent_tweets(self, query, verbosefunc, check_available_data, tweet_batch_size):
+        # Checks for tweet availability
+        if week_count != 0:
+            print("Tweets uploaded in last 7 days:", week_count)
+            self.available = True
+        else:
+            print("There are no Tweets available...")
+            self.available = False
+
+    def remove_duplicates(self, response):
+        # Extract tweet.ids
+        self.tweet_ids = []
+        for tweet in response:
+            self.tweet_ids.append(tweet.id)
+
+        print("Number of Tweets before deduplication:", len(self.tweet_ids))
+        self.tweet_ids = [*{*self.tweet_ids}]
+        print("Number of Tweets after deduplication:", len(self.tweet_ids))
+
+    def create_batches(self):
+        batch = []
+        for i in range(1, len(self.tweet_ids) + 1):
+            batch.append(self.tweet_ids[i - 1])
+            if i % 100 == 0:
+                self.tweet_batches.append(batch)
+                batch = []
+
+        # Append last batch < 100
+        self.tweet_batches.append(batch)
+
+    def get_tweets(self, query, verbose, batch_size):
         """ Method to download the recent tweets.
         """
         # Start client
         client = tweepy.Client(bearer_token=self.bearer_token)
 
-        if check_available_data:
-            # Check how many tweets are available
-            counts = client.get_recent_tweets_count(query=query, granularity="day")
-            week_count = 0
-            for daily_count in counts.data:
+        self.check_available(client, query)
 
-                print(daily_count)
-                week_count += daily_count["tweet_count"]
+        if self.available:
+            # Retrieve tweets for given query
+            response = tweepy.Paginator(client.search_recent_tweets, query=query, max_results=100). \
+                flatten(limit=batch_size)
 
-            print("Tweets in the last 7 days:", week_count)
-            exit()
+            self.remove_duplicates(response)
+            self.create_batches()
 
-        # Retrieve tweets for given query
-        response_basic = tweepy.Paginator(client.search_recent_tweets, query=query,
-                                          max_results=100).flatten(limit=tweet_batch_size)
+            tweet_fields = ["id", "created_at", "text", "source", "public_metrics", "entities", "lang", "geo"]
+            user_fields = ["id", "name", "location", "created_at"]
+            place_fields = ["place_type", "geo", "id", "name", "country_code"]
+            expansions = ["author_id", "geo.place_id"]
+            for batch in self.tweet_batches:
+                response = client.get_tweets(ids=batch, tweet_fields=tweet_fields, user_fields=user_fields,
+                                             place_fields=place_fields, expansions=expansions)
 
-        # Extract tweet.ids
-        tweet_ids = []
-        for tweet in response_basic:
-            tweet_ids.append(tweet.id)
+                for tweet in response.data:
+                    self.tweet_data[tweet.id] = {}
 
-        print("len before duplicate drop:", len(tweet_ids))
-        # Filter out duplicates
-        tweet_ids = list(set(tweet_ids))
-        print("len after duplicate drop:", len(tweet_ids))
+                    tweet_data = {"Id": tweet.id, "Created_At": tweet.created_at,
+                                  "Text": tweet.text.strip().replace("\n", " "), "Tweet_Source": tweet.source,
+                                  "Retweet_Count": tweet.public_metrics["retweet_count"],
+                                  "Reply_Count": tweet.public_metrics["reply_count"],
+                                  "Like_Count": tweet.public_metrics["like_count"],
+                                  "Quote_Count": tweet.public_metrics["quote_count"], "Language": tweet.lang}
+                    self.tweet_data[tweet.id]["Data"] = tweet_data
 
-        # Create batches:
-        batch_list = []
-        for step in range(0, len(tweet_ids), 100):
-            batch_list.append([step, step+100])
+                    tweet_user = {}
+                    for user in response.includes["users"]:
+                        if tweet.author_id == user.id:
+                            tweet_user["Id"] = user.id
+                            tweet_user["Name"] = user.name
+                            tweet_user["Location"] = user.location
+                            tweet_user["Created_At"] = user.created_at
 
-        # replace last element, to adapt batch size (if there is at least one element)
-        if batch_list:
+                    self.tweet_data[tweet.id]["User"] = tweet_user
 
-            # Chase that one batch is left
-            if (len(tweet_ids)) % 100 != 0:
-                # Replace last element
-                batch_list.pop(-1)
-                batch_list.append([batch_list[-1][1], batch_list[-1][1] + (len(tweet_ids) % 100)])
+                    tweet_place = {}
+                    if tweet.geo:
+                        for place in response.includes["places"]:
+                            if tweet.geo["place_id"] == place.id:
+                                tweet_place["Id"] = place.id
+                                tweet_place["Name"] = place.name
+                                tweet_place["Country_Code"] = place.country_code
+                                tweet_place["Geo"] = place.geo
+                                tweet_place["Type"] = place.place_type
+                    else:
+                        tweet_place["Id"] = None
+                        tweet_place["Name"] = None
+                        tweet_place["Country_Code"] = None
+                        tweet_place["Geo"] = None
+                        tweet_place["Type"] = None
 
-        # Only one query, which is smaller than 100 Tweets
+                    self.tweet_data[tweet.id]["Geo"] = tweet_place
+
+                    if tweet.entities and "hashtags" in tweet.entities:
+                        tweet_hashtags = tweet.entities["hashtags"]
+                        self.tweet_data[tweet.id]["Hashtags"] = tweet_hashtags
+                    else:
+                        self.tweet_data[tweet.id]["Hashtags"] = None
         else:
-            batch_list.append([0, len(tweet_ids)])
+            print("No data can be extracted from Twitter - Try it again later...")
 
-        # Iterate trough the tweet ids
-        tweet_data = []  # Stores data of all tweets
-        for current_batch in batch_list:
-            # Hydrating the tweet.id with additional information
-            response = client.get_tweets(ids=tweet_ids[current_batch[0]:current_batch[1]],
-                                         tweet_fields=["id", "created_at", "text", "source", "public_metrics",
-                                                       "entities", "lang", "geo"],
-                                         user_fields=["id", "name", "location", "created_at"],
-                                         place_fields=["place_type", "geo", "id", "name", "country_code"],
-                                         expansions=["author_id", "geo.place_id"])
-
-            # Define dictionary with  users in list from the includes object
-            users = {u["id"]: u for u in response.includes["users"]}
-
-            # There has to be at least one tweet with geo info
-            # Dict out of list of places from includes object
-            if "places" in response.includes:
-                places = {p["id"]: p for p in response.includes["places"]}
-
-            # Extract data
-            for tweet in response.data:
-
-                # Checks if hashtags data is availiable:
-                if tweet.entities and "hashtags" in tweet.entities:
-                    hashtag_data = tweet.entities["hashtags"]
-                else:
-                    hashtag_data = None
-
-                # Create list with data of current tweet
-                current_tweet_data = [tweet.id, tweet.created_at, tweet.text.strip().replace("\n", " "), tweet.source,
-                                      tweet.public_metrics["retweet_count"], tweet.public_metrics["reply_count"],
-                                      tweet.public_metrics["like_count"], tweet.public_metrics["quote_count"],
-                                      hashtag_data, tweet.lang]
-                # Extract tweet data
-                if verbosefunc:
-                    self.verbose_function(data_object=tweet, print_type="general")
-
-                if users[tweet.author_id]:  # Extract user data
-                    user = users[tweet.author_id]
-
-                    # Append user data to current tweet data
-                    current_tweet_data += [user.id, user.name, user.location, user.created_at]
-
-                    if verbosefunc:
-                        self.verbose_function(data_object=user, print_type="user")
-
-                if tweet.geo:   # Not all tweets have geo data
-                    if places[tweet.geo["place_id"]]:
-                        place = places[tweet.geo["place_id"]]
-
-                        current_tweet_data += [place.id, place.name, place.country_code, place.geo, place.place_type]
-
-                        if verbosefunc:
-                            self.verbose_function(data_object=place, print_type="place")
-
-                # Append empty element when there is no geo data
-                else:
-                    current_tweet_data += [None, None, None, None, None]
-
-                # Format elements to list and replace potential false separators
-                current_tweet_data = list(map(lambda x: x.replace("$", "€"), list(map(str, current_tweet_data))))
-
-                if verbosefunc:
-                    print(current_tweet_data)
-                # Append formatted tweet data to final list
-                tweet_data.append(current_tweet_data)
-
-        print(len(tweet_data))
-
-        return tweet_data
-
-    def pull_user_histories(self, user_id_list, verbosefunc, max_results):
-        """
-        Pulls the last up to 100 tweets of every user that is handed over in the user_id_list parameter. Retweets are
-        excluded from the analysis. The tweets are returned as python list.
-        :param user_id_list: List with the user_id's
-        :param verbosefunc: Detailed info in terminal when true
-        :param max_results: maximum tweets puller per user, current cap 100
-        :return: tweet_data
-        """
-
-        # Start client
-        client = tweepy.Client(bearer_token=self.bearer_token)
-
-        # Iterate trough the tweet ids
-        tweet_data = []  # Stores data of all tweets
-
-        for user_id in user_id_list:
-            response = client.get_users_tweets(id=user_id, exclude="retweets", max_results=max_results,
-                                               tweet_fields=["id", "created_at", "text", "source", "public_metrics",
-                                                             "entities", "lang", "geo"],
-                                               user_fields=["id", "name", "location", "created_at"],
-                                               place_fields=["place_type", "geo", "id", "name", "country_code"],
-                                               expansions=["author_id", "geo.place_id"])
-
-            # In the user history case only one user
-            # Define dictionary with  users in list from the includes object
-            users = {u["id"]: u for u in response.includes["users"]}
-
-            # There has to be at least one tweet with geo info
-            # Dict out of list of places from includes object
-            if "places" in response.includes:
-                places = {p["id"]: p for p in response.includes["places"]}
-
-            # Extract data
-            for tweet in response.data:
-
-                # Checks if hashtags data is availiable:
-                if tweet.entities and "hashtags" in tweet.entities:
-                    hashtag_data = tweet.entities["hashtags"]
-                else:
-                    hashtag_data = None
-
-                # Create list with data of current tweet
-                current_tweet_data = [tweet.id, tweet.created_at, tweet.text.strip().replace("\n", " "), tweet.source,
-                                      tweet.public_metrics["retweet_count"], tweet.public_metrics["reply_count"],
-                                      tweet.public_metrics["like_count"], tweet.public_metrics["quote_count"],
-                                      hashtag_data, tweet.lang]
-                # Extract tweet data
-                if verbosefunc:
-                    self.verbose_function(data_object=tweet, print_type="general")
-
-                if users[tweet.author_id]:  # Extract user data
-                    user = users[tweet.author_id]
-
-                    # Append user data to current tweet data
-                    current_tweet_data += [user.id, user.name, user.location, user.created_at]
-
-                    if verbosefunc:
-                        self.verbose_function(data_object=user, print_type="user")
-
-                if tweet.geo:  # Not all tweets have geo data
-                    if places[tweet.geo["place_id"]]:
-                        place = places[tweet.geo["place_id"]]
-
-                        current_tweet_data += [place.id, place.name, place.country_code, place.geo, place.place_type]
-
-                        if verbosefunc:
-                            self.verbose_function(data_object=place, print_type="place")
-
-                # Append empty element when there is no geo data
-                else:
-                    current_tweet_data += [None, None, None, None, None]
-
-                # Format elements to list and replace potential false separators
-                current_tweet_data = list(map(lambda x: x.replace("$", "€"), list(map(str, current_tweet_data))))
-
-                if verbosefunc:
-                    print(current_tweet_data)
-                # Append formatted tweet data to final list
-                tweet_data.append(current_tweet_data)
-
-        if verbosefunc:
-            print(len(tweet_data))
-
-        # Paginator version to pull up to 3200 tweets per user
-        """paginator = tweepy.Paginator(client.get_users_tweets, id=user.data.id, max_results=200)
-        for tweet in paginator.flatten(limit=3200):
-            print(tweet)"""
-
-        return tweet_data
-
-    @staticmethod
-    def save_tweets(tweets, columns):
+    def save_tweets(self):
         """ Method to store input tweets in a csv file.
         """
-        data_frame = pd.DataFrame(tweets, columns=columns)
-
         time = datetime.now().strftime("%d-%m-%Y_%H-%M")
-        data_frame.to_csv("Data/tweets_" + time + ".csv", sep="$")
+        with open('Data/tweets_' + time + '.json', 'w', encoding='utf-8') as out_file:
+            json.dump(self.tweet_data, out_file, ensure_ascii=False, indent=4, default=str)
 
 
 def main():
-
-    """# Download Tweets of last week
-    download_handler = DownloadHandler()
-    key_location = "Data/config.ini"
-    download_handler.read_config_file(key_location)
-    download_handler.create_api_interface()
-
-    query = "@DB OR Deutsche Bahn OR Die Bahn -is:retweet"      # excludes retweets
-
-    # Retweets are excluded with -RT
     query_nine_euro = "(#9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR #NeunEuroTickets OR neun-euro-ticket OR" \
                       " neun-euro-tickets OR (9 euro ticket) OR (9 euro tickets)) (lang:en OR lang:de) -RT"
     query_db_general = "((@DB_Bahn OR @DB_Info OR @DB_Presse OR (deutsche bahn) OR #DeutscheBahn OR #DBNavigator) " \
                        "-(RT OR #9EuroTicket OR #9EuroTickets OR #NeunEuroTicket OR #NeunEuroTickets OR #9euro OR " \
                        "neun-euro OR (9 euro) OR 9€)) (lang:de OR lang:en)"
 
-    test_query = "deutsche bahn lang:en"
-
-    tweets = download_handler.get_recent_tweets(query_db_general, False, True, 12000)
-
-    columns = ["tweet.id", "tweet.created_at", "tweet.text", "tweet.source", "tweet.retweet_count", "tweet.reply_count",
-               "tweet.like_count", "tweet.quote_count", "tweet.hashtags", "tweet.lang", "user.id", "user.name",
-               "user.location", "user.created_at", "place.id", "place.name", "place.country_code", "place.geo",
-               "place.place_type"]
-
-    download_handler.save_tweets(tweets, columns)   # """
-
-    # User history pull
     download_handler = DownloadHandler()
-    key_location = "Data/config.ini"
-    download_handler.read_config_file(key_location)
+    download_handler.read_config_file("Data/config.ini")
     download_handler.create_api_interface()
-
-    tweets = download_handler.pull_user_histories([1003746587842105346], verbosefunc=False, max_results=100)
-
-    columns = ["tweet.id", "tweet.created_at", "tweet.text", "tweet.source", "tweet.retweet_count", "tweet.reply_count",
-               "tweet.like_count", "tweet.quote_count", "tweet.hashtags", "tweet.lang", "user.id", "user.name",
-               "user.location", "user.created_at", "place.id", "place.name", "place.country_code", "place.geo",
-               "place.place_type"]
-
-    #download_handler.save_tweets(tweets, columns)  # """
+    download_handler.get_tweets(query_nine_euro, True, 12000)
+    download_handler.save_tweets()
 
 
 if __name__ == '__main__':
