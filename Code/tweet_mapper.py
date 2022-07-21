@@ -16,12 +16,12 @@ class TweetMapper:
         return data
 
     def extract_geo_data(self):
-        self.geo_tweets = []
+        self.geo_tweets = {}
         for tweet_id in self.tweet_data:
             tweet = self.tweet_data[tweet_id]
 
             if all(tweet['Geo'].values()):
-                self.geo_tweets.append(tweet)
+                self.geo_tweets[tweet_id] = tweet
 
     def save_data(self, data_file=None):
         if data_file is not None:

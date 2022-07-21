@@ -51,8 +51,8 @@ class Database:
 
 
 def main():
-    new_database = Database("/home/ubuntu/Projects/DeutscheBahnDataChallanges/Data/database_nine.json")
-    new_database.get_new_data("/home/ubuntu/Projects/DeutscheBahnDataChallanges/Data/tweets_21-07-2022_16-08_nine.json")
+    new_database = Database("/home/ubuntu/Projects/DeutscheBahnDataChallanges/Data/database_geo_general.json")
+    new_database.get_new_data("/home/ubuntu/Projects/DeutscheBahnDataChallanges/Data/Geo_Tweets21-07-2022_17-30.json")
     new_database.update_database()
     new_database.save_database()
 

@@ -6,26 +6,32 @@ from datetime import datetime
 
 
 class DownloadHandler:
-    """ Creates API access.
+    """
+    Creates API access and downloads a given number of Tweets if available.
     """
 
     def __init__(self):
-        """ Constructor.
         """
+        Constructor.
+        """
+        # Authentication attributes
         self.api_key = None
         self.api_key_secret = None
         self.access_token = None
         self.access_token_secret = None
         self.bearer_token = None
         self.api = None
-
+        # Attributes
         self.available = False
         self.tweet_ids = []
         self.tweet_batches = []
         self.tweet_data = {}
 
-    def read_config_file(self, path_to_file):
-        """ Reads the config file.
+    def read_config_file(self, path_to_file: str):
+        """
+        Reads the config file and saves the information in the attributes.
+
+        :param path_to_file: Path to config file --> contains authentication keys .
         """
         config = configparser.RawConfigParser()
         config.read(path_to_file)
@@ -38,7 +44,8 @@ class DownloadHandler:
         self.bearer_token = config["twitter"]["bearer_token"]
 
     def create_api_interface(self):
-        """ Uses authentication details to create an API interface.
+        """
+        Uses authentication details to create an API interface.
         """
         # Authentication
         authentication = tweepy.OAuthHandler(self.api_key, self.api_key_secret)
@@ -48,7 +55,11 @@ class DownloadHandler:
         self.api = tweepy.API(authentication, parser=tweepy.parsers.JSONParser())
 
     def check_available(self, client, query):
-        """ Checks if new tweets are available.
+        """
+        Checks if new tweets are available.
+
+        :param client: Contains the client used for Twitter access
+        :param query: Search query
         """
 
         # Finds all available tweets for the last 7 days
@@ -68,16 +79,30 @@ class DownloadHandler:
             self.available = False
 
     def remove_duplicates(self, response):
-        # Extract tweet.ids
+        """
+        Removes the duplicate Tweets that were pulled from Twitter.
+
+        :param response: Contains all Tweets pulled from Twitter.
+        """
+
+        # Extract Tweet ids
         self.tweet_ids = []
         for tweet in response:
             self.tweet_ids.append(tweet.id)
 
+        # Removes duplicates by putting the Tweets into a set.
+        # --> Only unique values
         print("Number of Tweets before deduplication:", len(self.tweet_ids))
         self.tweet_ids = [*{*self.tweet_ids}]
         print("Number of Tweets after deduplication:", len(self.tweet_ids))
 
     def create_batches(self):
+        """
+        Creates batches of size 100 as input for the tweepy.get_tweets() function.
+        """
+
+        # Iterating through all Tweets.
+        # --> Constructing batches of size 100
         batch = []
         for i in range(1, len(self.tweet_ids) + 1):
             batch.append(self.tweet_ids[i - 1])
@@ -89,29 +114,38 @@ class DownloadHandler:
         self.tweet_batches.append(batch)
 
     def get_tweets(self, query, verbose, batch_size):
-        """ Method to download the recent tweets.
         """
-        # Start client
+        Method to download the recent tweets.
+        """
+
+        # Create client with bearer token as authentication
         client = tweepy.Client(bearer_token=self.bearer_token)
 
+        # Check for available Tweets
         self.check_available(client, query)
 
+        # If Tweets are available
         if self.available:
-            # Retrieve tweets for given query
+            # Retrieve Tweets for given query
             response = tweepy.Paginator(client.search_recent_tweets, query=query, max_results=100). \
                 flatten(limit=batch_size)
 
+            # Remove duplicate Tweets
             self.remove_duplicates(response)
+            # Create batches for further processing
             self.create_batches()
 
+            # Information that needs to be extracted from the Tweets
             tweet_fields = ["id", "created_at", "text", "source", "public_metrics", "entities", "lang", "geo"]
             user_fields = ["id", "name", "location", "created_at"]
             place_fields = ["place_type", "geo", "id", "name", "country_code"]
             expansions = ["author_id", "geo.place_id"]
+            # Get Tweets from Twitter by searching for their ID
             for batch in self.tweet_batches:
                 response = client.get_tweets(ids=batch, tweet_fields=tweet_fields, user_fields=user_fields,
                                              place_fields=place_fields, expansions=expansions)
 
+                # Create JSON object
                 for tweet in response.data:
                     self.tweet_data[tweet.id] = {}
 
@@ -160,7 +194,8 @@ class DownloadHandler:
             print("No data can be extracted from Twitter - Try it again later...")
 
     def save_tweets(self):
-        """ Method to store input tweets in a csv file.
+        """
+        Method to store input tweets in a csv file.
         """
         time = datetime.now().strftime("%d-%m-%Y_%H-%M")
         with open('Data/tweets_' + time + '.json', 'w', encoding='utf-8') as out_file:
