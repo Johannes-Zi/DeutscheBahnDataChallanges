@@ -36,23 +36,27 @@ class DataProcessing:
 
         # Read in tweet data from files
         for current_file_path in input_file_list:
-            print("Current file path: ", current_file_path)
+            #print("Current file path: ", current_file_path)
 
             current_tweet_df = pd.read_csv(current_file_path, sep="$", index_col=0)
-            print(len(current_tweet_df))
+            #print(len(current_tweet_df))
             entry_count += len(current_tweet_df)
-            print(sum(current_tweet_df["place.name"] != "None"))
-            print(sum(current_tweet_df["place.place_type"] == "city"))
+            #print(sum(current_tweet_df["place.name"] != "None"))
+            #print(sum(current_tweet_df["place.place_type"] == "city"))
             self.tweet_df = pd.concat([self.tweet_df, current_tweet_df])
 
         # Drop duplicates
-        print(self.tweet_df.head())
-        self.tweet_df = self.tweet_df.drop_duplicates(subset="tweet.id")
-        print("Test", len(self.tweet_df[self.tweet_df.index.duplicated()]))
+        #print(self.tweet_df.head())
+        #self.tweet_df = self.tweet_df.set_index("tweet.id", inplace=False) # Sets index column to tweetid
+
+        self.tweet_df = self.tweet_df.drop_duplicates(subset="user.id")
+        #print("???", len(self.tweet_df[self.tweet_df.index.duplicated()]))  # gives back indexes that are present multiple times
+        #print("???", self.tweet_df.index)  # prints all present indexes
+
         print("Tweets with geo object: ", sum(self.tweet_df["place.name"] != "None"))
         print("Tweets with city geo object: ", sum(self.tweet_df["place.place_type"] == "city"))
-        print(len(self.tweet_df))
-        self.city_location_count += sum(self.tweet_df["place.place_type"] == "city")
+
+        print("length tweet.df", len(self.tweet_df))
 
         print("Counted csv entries (with duplicatiosn):", entry_count)
 
