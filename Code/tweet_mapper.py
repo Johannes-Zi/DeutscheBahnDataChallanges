@@ -1,31 +1,44 @@
-import pandas as pd
-import geopandas as gpd
+import json
+from datetime import datetime
 
 
 class TweetMapper:
 
-    def __init__(self):
-        self.data_frame = None
-        self.geo_data_frame = None
+    def __init__(self, json_file):
+        self.json_file = json_file
+        self.tweet_data = self.get_data()
+        self.geo_tweets = []
 
-    def extract_geo_data(self, csv_file):
-        self.data_frame = pd.read_csv(csv_file, sep="$")
+    def get_data(self):
+        with open(self.json_file, 'r') as in_file:
+            data = json.load(in_file)
 
-        new_frame = self.data_frame[0]
+        return data
 
-        print(new_frame)
+    def extract_geo_data(self):
+        self.geo_tweets = []
+        for tweet_id in self.tweet_data:
+            tweet = self.tweet_data[tweet_id]
 
-    def get_data(self, csv_file):
-        self.geo_data_frame = gpd.GeoDataFrame(csv_file)
+            if all(tweet['Geo'].values()):
+                self.geo_tweets.append(tweet)
 
-        self.geo_data_frame.head()
+    def save_data(self, data_file=None):
+        if data_file is not None:
+            with open(data_file, 'a', encoding='utf-8') as out_file:
+                json.dump(self.geo_tweets, out_file, ensure_ascii=False, indent=4)
+        else:
+            time = datetime.now().strftime("%d-%m-%Y_%H-%M")
+            with open('Geo_Tweets' + time + '.json', 'w', encoding='utf-8') as out_file:
+                json.dump(self.geo_tweets, out_file, ensure_ascii=False, indent=4)
 
 
 def main():
-    csv_file = "/home/ubuntu/Projects/DeutscheBahnDataChallanges/Data/06.07.2022/tweets_06-07-2022_15-07_nine.csv"
+    json_file = "/home/ubuntu/Projects/DeutscheBahnDataChallanges/Data/tweets_21-07-2022_16-05_general.json"
 
-    new_mapper = TweetMapper()
-    new_mapper.extract_geo_data(csv_file)
+    new_mapper = TweetMapper(json_file)
+    new_mapper.extract_geo_data()
+    new_mapper.save_data()
 
 
 if __name__ == '__main__':
