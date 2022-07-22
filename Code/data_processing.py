@@ -177,24 +177,29 @@ class DataProcessing:
             lambda name_list: name_list.unassigned_locations + self.text_city_key_extraction(name_list.tweet_text)[2],
             axis=1)
 
-        #print(self.short_tweet_df.head())
+        """#print(self.short_tweet_df.head())
+        print("Hometown count distribution: \n", self.short_tweet_df["hometowns"].value_counts())
+        print("Destination count distribution: \n", self.short_tweet_df["destinations"].value_counts())
+        print("Unassigned_locations count distribution: \n", self.short_tweet_df["unassigned_locations"].value_counts())
+        """
+
+        # Drop all rows, where no geolocation was assigned
+        self.short_tweet_df = self.short_tweet_df[(self.short_tweet_df["hometowns"].map(lambda x: len(x)) > 0) |
+                                                  (self.short_tweet_df["destinations"].map(lambda x: len(x)) > 0) |
+                                                  (self.short_tweet_df["unassigned_locations"].map(lambda x: len(x))
+                                                   > 0)]
+
+        """print("###########################################")
+        print(len(self.short_tweet_df))
+        print(self.short_tweet_df.head())
+
+
         print("Hometown count distribution: \n", self.short_tweet_df["hometowns"].value_counts())
         print("Destination count distribution: \n", self.short_tweet_df["destinations"].value_counts())
         print("Unassigned_locations count distribution: \n", self.short_tweet_df["unassigned_locations"].value_counts())
 
-        print(self.short_tweet_df.head())
-
-        # Drop all rows, where no geolocation was assigned
-        self.short_tweet_df = self.short_tweet_df.drop(self.short_tweet_df[
-                                                (self.short_tweet_df.hometowns.map(lambda x: len(x)) == 0) &
-                                                (self.short_tweet_df.destinations.map(lambda x: len(x)) == 0) &
-                                                (self.short_tweet_df.unassigned_locations.map(lambda x: len(x)) == 0)
-                                                ].index)
-
         # Print specific index
-        #print(self.short_tweet_df.loc[[3]])
-
-        return None
+        #print(self.short_tweet_df.loc[[3]])"""
 
     def save_user_ids_as_csv(self):
         """
