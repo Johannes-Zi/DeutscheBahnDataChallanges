@@ -224,6 +224,7 @@ class DownloadHandler:
 
         for user_id in user_id_list:
             response = client.get_users_tweets(id=user_id, exclude="retweets", max_results=max_results,
+                                               end_time="2022-05-31T00:00:01",
                                                tweet_fields=["id", "created_at", "text", "source", "public_metrics",
                                                              "entities", "lang", "geo"],
                                                user_fields=["id", "name", "location", "created_at"],
