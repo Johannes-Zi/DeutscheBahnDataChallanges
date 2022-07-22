@@ -201,20 +201,25 @@ class DataProcessing:
         # Print specific index
         #print(self.short_tweet_df.loc[[3]])"""
 
-    def save_user_ids_as_csv(self):
+    def extract_individual_user_ids(self):
+        """
+        Extracts individual user id of the short_tweet_df for the user history pulls.
+        :return: user_id_df
         """
 
-        :return:
-        """
-        return None
+        print("Number of tweets in df with duplicates", len(self.short_tweet_df))
 
-    def load_user_ids(self):
-        """
+        # Extract tweets with assigned hometown and travel destination
+        self.short_tweet_df = self.short_tweet_df[(self.short_tweet_df["hometowns"].map(lambda x: len(x)) > 0) &
+                                                  (self.short_tweet_df["destinations"].map(lambda x: len(x)) > 0)]
+        # Drop user id duplicates
+        user_id_df = self.short_tweet_df.drop_duplicates(subset="user_id")
+        user_id_list = self.short_tweet_df['user_id'].tolist()
+        print("Indidual users with assigned geo data", len(user_id_df))
 
-        :return:
-        """
+        print(user_id_list[:10])
 
-        return None
+        return user_id_list
 
 
 def main():
@@ -230,6 +235,8 @@ def main():
     tweet_processing.create_df_with_storage_data(input_dir_path=storage_dir_path)
 
     tweet_processing.create_short_tweet_df()
+
+    tweet_processing.extract_individual_user_ids()
 
     #print(dict(list(tweet_processing.city_key_dict.items())[:20]))
     """print(tweet_processing.city_key_dict["München"])
