@@ -56,12 +56,11 @@ class DataProcessing:
 
         print("Tweets with geo object: ", sum(self.tweet_df["place.name"] != "None"))
         print("Tweets with city geo object: ", sum(self.tweet_df["place.place_type"] == "city"))
-        print(len(self.tweet_df))
         self.city_location_count += sum(self.tweet_df["place.place_type"] == "city")
 
-        print("length tweet.df", len(self.tweet_df))
+        print("length tweet.df (without duplicates)", len(self.tweet_df))
 
-        print("Counted csv entries (with duplicatiosn):", entry_count)
+        print("Counted csv entries (with duplications):", entry_count)
 
     def load_city_key_data(self, city_key_file_path):
         """
@@ -128,35 +127,6 @@ class DataProcessing:
             current_list_position += 1
 
         return start_keys_list, end_keys_list, isolated_keys_list
-
-    def db_key_extraction(self, tweet_text):
-        """
-        Function determines if a tweet text is related to the deutsch bahn
-        :param tweet_text: trivial
-        :return: db_related
-        """
-
-        # True if tweet text is db related
-        db_related = False
-
-        # Split tweet text, to search for words not substrings
-        tweet_text_split = tweet_text.split()
-
-        # Remove all  hashtags, dots, commas in front of the words to enable key search
-        tweet_text_split = list(map(lambda x: x.replace("#", "").replace(".", "").replace(",", ""), tweet_text_split))
-
-        key_dict = {"@DB_Bahn": "@DB_Bahn", "@DB_Info": "@DB_Info", "@DB_Presse": "@DB_Presse", "bahn": "bahn",
-                    "Bahn": "Bahn", "DeutscheBahn": "DeutscheBahn",  "#DBNavigator": "#DBNavigator", }
-
-        # Check for each word, if it is a key in the db key name dict
-        for current_word in tweet_text_split:
-
-            # Checks if word is a key
-            if current_word in self.city_key_dict:
-                db_related = True
-                break
-
-        return db_related
 
     def create_short_tweet_df(self):
         """
@@ -237,25 +207,32 @@ class DataProcessing:
         Extracts individual user id of the short_tweet_df for the user history pulls.
         :return: user_id_df
         """
-
-        print("Number of tweets in df with duplicates", len(self.short_tweet_df))
+        print("\n")
+        print("(Short_df) Number of geo tweets in df without duplicates", len(self.short_tweet_df))
 
         # Extract tweets with assigned hometown and travel destination
         self.short_tweet_df = self.short_tweet_df[(self.short_tweet_df["hometowns"].map(lambda x: len(x)) > 0) &
                                                   (self.short_tweet_df["destinations"].map(lambda x: len(x)) > 0)]
         # Drop user id duplicates
         user_id_df = self.short_tweet_df.drop_duplicates(subset="user_id")
-        user_id_list = self.short_tweet_df['user_id'].tolist()
-        print("Indidual users with assigned geo data", len(user_id_df))
+        user_id_list = user_id_df['user_id'].tolist()
+        print("Indidual users with assigned geo data", len(user_id_list))
 
-        print(user_id_list[:10])
+        #print(user_id_list[:10])
 
         return user_id_list
 
 
+    def extract_relevant_city_data(self):
+        """
+        Extract and summarizes the sentiment data of the top 25 represented cities in the dataframe.
+        REMINDER: distinct between 9euro related and before with the timestamp
+        :return:
+        """
+
+
 def main():
     # Read in storage files
-    #storage_dir_path = "/home/johannes/Desktop/tweet_data/"
     storage_dir_path = "C://Users//19joh//Desktop//testdir//"
 
     city_key_file_path = "C://Users//19joh//Desktop//deutschland_gemeinden_short.txt"
@@ -268,14 +245,6 @@ def main():
     tweet_processing.create_short_tweet_df()
 
     tweet_processing.extract_individual_user_ids()
-
-    #print(dict(list(tweet_processing.city_key_dict.items())[:20]))
-    """print(tweet_processing.city_key_dict["München"])
-
-    teststring = "Ich reise heute von Berlin nach München. Obersinn ist auch schön. Auf nach #Sylt, #Burgsinn und " \
-                 "Offenbach."
-
-    print(tweet_processing.text_city_key_extraction(teststring))"""
 
 
 if __name__ == '__main__':

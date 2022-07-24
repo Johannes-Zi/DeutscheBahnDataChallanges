@@ -224,16 +224,21 @@ class DownloadHandler:
 
         for user_id in user_id_list:
             response = client.get_users_tweets(id=user_id, exclude="retweets", max_results=max_results,
-                                               end_time="2022-05-31T00:00:01",
+                                               end_time="2022-05-31T00:00:01Z",
                                                tweet_fields=["id", "created_at", "text", "source", "public_metrics",
                                                              "entities", "lang", "geo"],
                                                user_fields=["id", "name", "location", "created_at"],
                                                place_fields=["place_type", "geo", "id", "name", "country_code"],
                                                expansions=["author_id", "geo.place_id"])
 
+            # Skip user that have not tweeted before the 9 euro ticket - skip to next loop run / user
+            if not response.data:
+                continue
+
             # In the user history case only one user
             # Define dictionary with  users in list from the includes object
-            users = {u["id"]: u for u in response.includes["users"]}
+            if "users" in response.includes:
+                users = {u["id"]: u for u in response.includes["users"]}
 
             # There has to be at least one tweet with geo info
             # Dict out of list of places from includes object
@@ -267,6 +272,9 @@ class DownloadHandler:
                     if verbosefunc:
                         self.verbose_function(data_object=user, print_type="user")
 
+                else:
+                    current_tweet_data += ["None", "None", "None", "None"]
+
                 if tweet.geo:  # Not all tweets have geo data
                     if places[tweet.geo["place_id"]]:
                         place = places[tweet.geo["place_id"]]
@@ -288,15 +296,54 @@ class DownloadHandler:
                 # Append formatted tweet data to final list
                 tweet_data.append(current_tweet_data)
 
-        if verbosefunc:
-            print(len(tweet_data))
-
         # Paginator version to pull up to 3200 tweets per user
         """paginator = tweepy.Paginator(client.get_users_tweets, id=user.data.id, max_results=200)
         for tweet in paginator.flatten(limit=3200):
             print(tweet)"""
 
+        print("User history tweets pulled:", len(tweet_data))
+
         return tweet_data
+
+    def db_key_extraction(self, tweet_text):
+        """
+        Function determines if a tweet text is related to the deutsch bahn
+        :param tweet_text: trivial
+        :return: db_related
+        """
+
+        # True if tweet text is db related
+        db_related = False
+
+        # Split tweet text, to search for words not substrings
+        tweet_text_split = tweet_text.split()
+
+        # Remove all  hashtags, dots, commas in front of the words to enable key search
+        tweet_text_split = list(map(lambda x: x.replace("#", "").replace(".", "").replace(",", ""), tweet_text_split))
+
+        key_dict = {"@DB_Bahn": "@DB_Bahn", "@DB_Info": "@DB_Info", "@DB_Presse": "@DB_Presse", "bahn": "bahn",
+                    "Bahn": "Bahn", "DeutscheBahn": "DeutscheBahn", "#DBNavigator": "#DBNavigator",
+                    "#9EuroTicket": "#9EuroTicket", "#9EuroTickets": "#9EuroTickets",
+                    "#NeunEuroTicket": "#NeunEuroTicket", "#NeunEuroTickets": "#NeunEuroTickets",
+                    "neun-euro-ticket": "neun-euro-ticket", "neun-euro-tickets": "neun-euro-tickets",
+                    }
+
+        # Check for each word, if it is a key in the db key name dict
+        for current_word in tweet_text_split:
+
+            # Checks if word is a key
+            if current_word in self.city_key_dict:
+                db_related = True
+                break
+
+        return db_related
+
+    def exclude_unrelated_tweets(self):
+        """
+        Uses db_key_extraction to add relation information in new column and drops then the tweets that are not
+         deutsche bahn related
+        :return:
+        """
 
     @staticmethod
     def save_tweets(tweets, columns):
