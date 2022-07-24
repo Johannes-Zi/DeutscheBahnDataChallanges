@@ -305,46 +305,6 @@ class DownloadHandler:
 
         return tweet_data
 
-    def db_key_extraction(self, tweet_text):
-        """
-        Function determines if a tweet text is related to the deutsch bahn
-        :param tweet_text: trivial
-        :return: db_related
-        """
-
-        # True if tweet text is db related
-        db_related = False
-
-        # Split tweet text, to search for words not substrings
-        tweet_text_split = tweet_text.split()
-
-        # Remove all  hashtags, dots, commas in front of the words to enable key search
-        tweet_text_split = list(map(lambda x: x.replace("#", "").replace(".", "").replace(",", ""), tweet_text_split))
-
-        key_dict = {"@DB_Bahn": "@DB_Bahn", "@DB_Info": "@DB_Info", "@DB_Presse": "@DB_Presse", "bahn": "bahn",
-                    "Bahn": "Bahn", "DeutscheBahn": "DeutscheBahn", "#DBNavigator": "#DBNavigator",
-                    "#9EuroTicket": "#9EuroTicket", "#9EuroTickets": "#9EuroTickets",
-                    "#NeunEuroTicket": "#NeunEuroTicket", "#NeunEuroTickets": "#NeunEuroTickets",
-                    "neun-euro-ticket": "neun-euro-ticket", "neun-euro-tickets": "neun-euro-tickets",
-                    }
-
-        # Check for each word, if it is a key in the db key name dict
-        for current_word in tweet_text_split:
-
-            # Checks if word is a key
-            if current_word in self.city_key_dict:
-                db_related = True
-                break
-
-        return db_related
-
-    def exclude_unrelated_tweets(self):
-        """
-        Uses db_key_extraction to add relation information in new column and drops then the tweets that are not
-         deutsche bahn related
-        :return:
-        """
-
     @staticmethod
     def save_tweets(tweets, columns):
         """ Method to store input tweets in a csv file.

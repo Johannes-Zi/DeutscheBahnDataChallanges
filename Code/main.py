@@ -5,7 +5,8 @@ import data_processing
 
 def main():
 
-    # Read in storage files
+    # Pull relevant user histories
+    """# Read in storage files
     storage_dir_path = "C://Users//19joh//Desktop//testdir//"
     # File with city key names
     city_key_file_path = "C://Users//19joh//Desktop//deutschland_gemeinden_short.txt"
@@ -41,13 +42,22 @@ def main():
                "tweet.like_count", "tweet.quote_count", "tweet.hashtags", "tweet.lang", "user.id", "user.name",
                "user.location", "user.created_at", "place.id", "place.name", "place.country_code", "place.geo",
                "place.place_type"]
-    download_handler_1.save_tweets(tweets, columns)
+    download_handler_1.save_tweets(tweets, columns)"""
 
-    # Next steps:
-    # 1. Load history tweets
-    # 2. filter not db related out
-    # 3. save the tweets as files
+    # Extract relevant history files and save them as csv
 
+    # Read in storage files
+    storage_dir_path = "C://Users//19joh//Desktop//history_tweets//"
+    # Create tweet processing instance
+    tweet_processing = data_processing.DataProcessing()
+    # Read in the tweets of user histories
+    tweet_processing.create_df_with_storage_data(input_dir_path=storage_dir_path)
+    # Extract DB related tweets and save them as csv
+    tweet_processing.save_db_related_tweets()
+
+    # Enable deeper history search - not id then paginator, simply initialise unnecessary columns with none
+
+    # Overrepresented railway line extraction
     # 4. Load all tweet files as single df
     # 5. create short df
     # 6. Extract top 20 city combinations

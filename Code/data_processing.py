@@ -1,5 +1,6 @@
 import pandas as pd
 import glob
+from datetime import datetime
 
 
 class DataProcessing:
@@ -222,18 +223,78 @@ class DataProcessing:
 
         return user_id_list
 
-
-    def extract_relevant_city_data(self):
+    def db_key_extraction(self, tweet_text):
         """
-        Extract and summarizes the sentiment data of the top 25 represented cities in the dataframe.
-        REMINDER: distinct between 9euro related and before with the timestamp
+        Function determines if a tweet text is related to the deutsch bahn
+        :param tweet_text: trivial
+        :return: db_related
+        """
+
+        # True if tweet text is db related
+        db_related = False
+
+        # Split tweet text, to search for words not substrings
+        tweet_text_split = tweet_text.split()
+
+        # Remove all  hashtags, dots, commas in front of the words to enable key search
+        tweet_text_split = list(map(lambda x: x.replace("#", "").replace(".", "").replace(",", ""), tweet_text_split))
+
+        key_dict = {"@DB_Bahn": "@DB_Bahn", "@DB_Info": "@DB_Info", "@DB_Presse": "@DB_Presse", "bahn": "bahn",
+                    "Bahn": "Bahn", "DeutscheBahn": "DeutscheBahn", "#DBNavigator": "#DBNavigator",
+                    "#9EuroTicket": "#9EuroTicket", "#9EuroTickets": "#9EuroTickets",
+                    "#NeunEuroTicket": "#NeunEuroTicket", "#NeunEuroTickets": "#NeunEuroTickets",
+                    "neun-euro-ticket": "neun-euro-ticket", "neun-euro-tickets": "neun-euro-tickets",
+                    }
+
+        # Check for each word, if it is a key in the db key name dict
+        for current_word in tweet_text_split:
+
+            # Checks if word is a key
+            if current_word in key_dict:
+                db_related = True
+                break
+
+        return db_related
+
+    def save_db_related_tweets(self):
+        """
+        Extracts the tweets out of the dataframe that are related to the the Deutsche Bahn and saves them as csv file.
         :return:
         """
+
+        # Remove dots form column names, they are obstructive
+        self.tweet_df.columns = self.tweet_df.columns.str.replace('.', '_')
+
+        # Add column for DB relation assessment
+        self.tweet_df["db_related"] = False
+
+        # Determine if the tweet texts are DB related
+        self.tweet_df["db_related"] = self.tweet_df.apply(lambda db_related:
+                                                          self.db_key_extraction(tweet_text=db_related.tweet_text),
+                                                          axis=1)
+
+        # Drop tweets that are not db related
+        self.tweet_df = self.tweet_df[(self.tweet_df["db_related"] == True)]
+
+        # Drop unnecessary column
+        self.tweet_df = self.tweet_df.drop(["db_related"], axis=1)
+
+        print(self.tweet_df.head())
+
+        print("DB related tweets in df:", len(self.tweet_df))
+
+        # Count the number of individual users in data
+        user_id_df = self.tweet_df.drop_duplicates(subset="user_id")
+        print("Individual users with DB related Tweets in history", len(user_id_df))
+
+        # Save tweets as csv file
+        time = datetime.now().strftime("%d-%m-%Y_%H-%M")
+        #self.tweet_df.to_csv("Data/tweets_" + time + ".csv", sep="$")
 
 
 def main():
     # Read in storage files
-    storage_dir_path = "C://Users//19joh//Desktop//testdir//"
+    """storage_dir_path = "C://Users//19joh//Desktop//testdir//"
 
     city_key_file_path = "C://Users//19joh//Desktop//deutschland_gemeinden_short.txt"
 
@@ -244,7 +305,7 @@ def main():
 
     tweet_processing.create_short_tweet_df()
 
-    tweet_processing.extract_individual_user_ids()
+    tweet_processing.extract_individual_user_ids()"""
 
 
 if __name__ == '__main__':
