@@ -382,6 +382,10 @@ class DataProcessing:
         :return:
         """
 
+        # Save dataframe for manual annotation as csv
+        time = datetime.now().strftime("%d-%m-%Y_%H-%M")
+        self.short_tweet_df.to_csv("Data/9euro-annotation" + time + ".csv", sep="$")
+
         # Check the abundance of all cities in the tweets of the top 657 User tweets
         # Extract the city names as list of lists with city names
         hometown_city_list = self.short_tweet_df["hometowns"].tolist()
