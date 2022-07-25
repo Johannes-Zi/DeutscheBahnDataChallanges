@@ -6,7 +6,7 @@ import data_processing
 def main():
 
     # Pull relevant user histories
-    """# Read in storage files
+    # Read in storage files
     storage_dir_path = "C://Users//19joh//Desktop//testdir//"
     # File with city key names
     city_key_file_path = "C://Users//19joh//Desktop//deutschland_gemeinden_short.txt"
@@ -24,7 +24,7 @@ def main():
     # Extract relevant user ids for history search
     user_id_list = tweet_processing.extract_individual_user_ids()
 
-    # Created download instance
+    # Create download instance
     download_handler_1 = download_handler.DownloadHandler()
     key_location = "Data/config.ini"
     # Create API connection
@@ -32,42 +32,43 @@ def main():
     download_handler_1.create_api_interface()
 
     # Pull the history tweets
-    #tweets = download_handler_1.pull_user_histories([1003746587842105346,
-    #                                                 1003746587842105346], verbosefunc=False, max_results=10)
-    tweets = download_handler_1.pull_user_histories(user_id_list=user_id_list,
-                                                    verbosefunc=False, max_results=100)
+    #tweets = download_handler_1.pull_user_histories_deep([1003746587842105346,
+    #                                                      1003746587842105346], max_results=10)
+    tweets = download_handler_1.pull_user_histories_deep(user_id_list=user_id_list[250:300], max_results=2000)
 
     # Save the tweets as file
-    columns = ["tweet.id", "tweet.created_at", "tweet.text", "tweet.source", "tweet.retweet_count", "tweet.reply_count",
-               "tweet.like_count", "tweet.quote_count", "tweet.hashtags", "tweet.lang", "user.id", "user.name",
-               "user.location", "user.created_at", "place.id", "place.name", "place.country_code", "place.geo",
-               "place.place_type"]
-    download_handler_1.save_tweets(tweets, columns)"""
+    columns = ["tweet.id", "tweet.created_at", "tweet.text", "user.id"]
+    download_handler_1.save_tweets(tweets, columns)
+    #"""
 
     # Extract relevant history files and save them as csv
-
-    # Read in storage files
+    """# Read in storage files
     storage_dir_path = "C://Users//19joh//Desktop//history_tweets//"
     # Create tweet processing instance
     tweet_processing = data_processing.DataProcessing()
     # Read in the tweets of user histories
     tweet_processing.create_df_with_storage_data(input_dir_path=storage_dir_path)
     # Extract DB related tweets and save them as csv
-    tweet_processing.save_db_related_tweets()
+    tweet_processing.save_db_related_tweets_for_annotation()
+    #"""
 
-    # Enable deeper history search - not id then paginator, simply initialise unnecessary columns with none
+    # Overrepresented railway line extraction out of short 650er df
+    # 4. frequencuies von cities bestimmen
+    # 5. alle kombinationen von häufigen städten erstellen
+    # 6. häufigkeit aller kombinationen zählen
+    # 7. Extract tweets of top 20 combinations user ids,
+    # dict funktion bekommt liste mit zusätzlicher bool spalte, rest droppen
 
-    # Overrepresented railway line extraction
-    # 4. Load all tweet files as single df
-    # 5. create short df
-    # 6. Extract top 20 city combinations
-    # 7. Extract tweets of top 20 combinations
-    # 7.1 Assign users to top 20 twenty combinations
-    # 8. Save tweets ready for annotation (all db tweets of user that are part of the top combinations)
     # 9. manually annotate tweets
     # 10. read in tweets
+
     # 11. determine sentiment difference before and after 9euro ticket for each user, an then reference to the
     # combinations
+    # history df und 9euro getrennt anschauen stimmung für jeder der 20 Strecken bestimmen, und dann die dfs vergleichen
+
+    # aufkerte einzeichnen und präsentation bauen
+
+    # Präsentation erstellen
 
 
 if __name__ == '__main__':

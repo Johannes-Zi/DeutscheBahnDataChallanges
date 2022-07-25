@@ -314,10 +314,13 @@ class DownloadHandler:
 
         # Iterate trough the tweet ids
         tweet_data = []  # Stores data of all tweets
-
+        count = 0
         for user_id in user_id_list:
 
-            paginator_response = tweepy.Paginator(client.get_users_tweets, id=user_id, max_results=max_results,
+            print("current user:", count)
+            count += 1
+
+            paginator_response = tweepy.Paginator(client.get_users_tweets, id=user_id, max_results=100,
                                                   exclude="retweets", end_time="2022-05-31T00:00:01Z",
                                                   tweet_fields=["id", "created_at", "text"]).flatten(limit=max_results)
 

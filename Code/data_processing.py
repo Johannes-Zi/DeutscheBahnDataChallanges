@@ -20,6 +20,7 @@ class DataProcessing:
         self.city_key_dict = {}
         self.short_tweet_df = pd.DataFrame
         self.history_short_tweet_df = pd.DataFrame
+        self.user_id_dict = {}
 
     def create_df_with_storage_data(self, input_dir_path):
         """
@@ -55,9 +56,9 @@ class DataProcessing:
         #print("???", len(self.tweet_df[self.tweet_df.index.duplicated()]))  # gives back indexes that are present multiple times
         #print("???", self.tweet_df.index)  # prints all present indexes
 
-        print("Tweets with geo object: ", sum(self.tweet_df["place.name"] != "None"))
-        print("Tweets with city geo object: ", sum(self.tweet_df["place.place_type"] == "city"))
-        self.city_location_count += sum(self.tweet_df["place.place_type"] == "city")
+        #print("Tweets with geo object: ", sum(self.tweet_df["place.name"] != "None"))
+        #print("Tweets with city geo object: ", sum(self.tweet_df["place.place_type"] == "city"))
+        #self.city_location_count += sum(self.tweet_df["place.place_type"] == "city")
 
         print("length tweet.df (without duplicates)", len(self.tweet_df))
 
@@ -257,7 +258,24 @@ class DataProcessing:
 
         return db_related
 
-    def save_db_related_tweets(self):
+    def check_user_abundance_in_df(self, user_id):
+        """
+        Checks how often a user is present in a dataframe a returns False if the user is already overrepresented.
+        :param user_id: trivial
+        :return:
+        """
+
+        user_overrepresented = False
+
+        if self.user_id_dict[user_id] >= 3:
+            user_overrepresented = True
+
+        else:
+            self.user_id_dict[user_id] = self.user_id_dict[user_id] + 1
+
+        return user_overrepresented
+
+    def save_db_related_tweets_for_annotation(self):
         """
         Extracts the tweets out of the dataframe that are related to the the Deutsche Bahn and saves them as csv file.
         :return:
@@ -271,8 +289,8 @@ class DataProcessing:
 
         # Determine if the tweet texts are DB related
         self.tweet_df["db_related"] = self.tweet_df.apply(lambda db_related:
-                                                          self.db_key_extraction(tweet_text=db_related.tweet_text),
-                                                          axis=1)
+                                                          self.db_key_extraction(tweet_text=db_related.tweet_text,
+                                                                                 self=self), axis=1)
 
         # Drop tweets that are not db related
         self.tweet_df = self.tweet_df[(self.tweet_df["db_related"] == True)]
@@ -280,13 +298,36 @@ class DataProcessing:
         # Drop unnecessary column
         self.tweet_df = self.tweet_df.drop(["db_related"], axis=1)
 
-        print(self.tweet_df.head())
-
         print("DB related tweets in df:", len(self.tweet_df))
 
-        # Count the number of individual users in data
+        # Individual users ids in the dataset
         user_id_df = self.tweet_df.drop_duplicates(subset="user_id")
         print("Individual users with DB related Tweets in history", len(user_id_df))
+
+        # Create key dict for all the users with DB tweets in history
+        user_id_list_db = user_id_df["user_id"].tolist()
+        # Initialise dictionary
+        for userd_id in user_id_list_db:
+            self.user_id_dict[userd_id] = 0  # Initialise count with zero
+
+        # Add additional row to df for assignment if a tweet should be dropped because there are already enough tweets
+        # of this user in the dataframe
+        self.tweet_df["overrepresented"] = False
+
+        # Assign if tweets should be kicked out because of overrepresentation
+        self.tweet_df["overrepresented"] = self.tweet_df.apply(lambda x: self.check_user_abundance_in_df(x.user_id),
+                                                               axis=1)
+
+        # Drop overrepresented tweets from dataframe
+        self.tweet_df = self.tweet_df[(self.tweet_df["overrepresented"] == False)]
+
+        # Drop column for overrepresented
+        self.tweet_df = self.tweet_df.drop(["overrepresented"], axis=1)
+
+        # Add column for annotation
+        self.tweet_df["sentiment"] = None
+
+        print("Number of tweets for annotation:", len(self.tweet_df))
 
         # Save tweets as csv file
         time = datetime.now().strftime("%d-%m-%Y_%H-%M")
