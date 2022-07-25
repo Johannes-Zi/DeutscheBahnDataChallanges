@@ -21,6 +21,12 @@ class DataProcessing:
         self.short_tweet_df = pd.DataFrame
         self.history_short_tweet_df = pd.DataFrame
         self.user_id_dict = {}
+        self.relevant_city_combination_dict = {}
+        self.relevant_user_dict = {}
+        self.intersting_routes_dict = {"Dresden$Leipzig": 6, "Berlin$München": 15, "Frankfurt$Kassel": 5,
+                                       "Berlin$Hamburg": 18, "Hamburg$Rostock": 10, "Hamburg$Kiel": 5,
+                                       "Berlin$Frankfurt": 9, "Berlin$Köln": 11, "Berlin$Leipzig": 5,
+                                       "Berlin$Magdeburg": 5, "Berlin$Rostock": 6, "Düsseldorf$Köln": 9}
 
     def create_df_with_storage_data(self, input_dir_path):
         """
@@ -215,6 +221,8 @@ class DataProcessing:
         # Extract tweets with assigned hometown and travel destination
         self.short_tweet_df = self.short_tweet_df[(self.short_tweet_df["hometowns"].map(lambda x: len(x)) > 0) &
                                                   (self.short_tweet_df["destinations"].map(lambda x: len(x)) > 0)]
+
+        print("Number of top 657 User tweets", len(self.short_tweet_df))
         # Drop user id duplicates
         user_id_df = self.short_tweet_df.drop_duplicates(subset="user_id")
         user_id_list = user_id_df['user_id'].tolist()
@@ -332,6 +340,113 @@ class DataProcessing:
         # Save tweets as csv file
         time = datetime.now().strftime("%d-%m-%Y_%H-%M")
         #self.tweet_df.to_csv("Data/tweets_" + time + ".csv", sep="$")
+
+    def assign_tweet_text_to_city_combination(self, hometowns, destinations, user_id):
+        """
+        Checks what city combination is part of the tweet text and increments the count if a tweet text that is related
+        to a top combination in the dictionary
+        :param hometowns: trivial
+        :param destinations: trivial
+        :return: None
+        """
+
+        # Stores all possible city combinations of the current tweet
+        temp_dict = {}
+
+        for city in hometowns:
+            for city_2 in destinations:
+                # Irrelevant case
+                if city == city_2:
+                    continue
+                else:
+                    name_constallation = [city, city_2]
+                    name_constallation.sort()
+                    temp_dict[name_constallation[0] + "$" + name_constallation[1]] = 0
+
+        # Check if there are relevant city combination in the current tweet data
+        for key, value in temp_dict.items():
+            if key in self.relevant_city_combination_dict:
+                # Increment the number of occurrence of the specific city combination
+                self.relevant_city_combination_dict[key] = self.relevant_city_combination_dict[key] + 1
+
+                if key in self.intersting_routes_dict:
+                    self.relevant_user_dict[user_id] = user_id
+
+        # Return with no effect
+        return hometowns
+
+    def check_overrepresented_city_combination(self):
+        """
+        Determines which cities have a high abundance, and thus checks which city combinations alias pseudo train lines
+        are highly present in the dataset.
+        :return:
+        """
+
+        # Check the abundance of all cities in the tweets of the top 657 User tweets
+        # Extract the city names as list of lists with city names
+        hometown_city_list = self.short_tweet_df["hometowns"].tolist()
+        destination_city_list = self.short_tweet_df["destinations"].tolist()
+
+        # Stores all cities that are present in the data
+        city_dict = {}
+
+        # Count the city abundance and save this information in the dict
+        for city_list in hometown_city_list:
+            for city_name in city_list:
+
+                # Case that city already occurs
+                if city_name in city_dict:
+                    city_dict[city_name] = city_dict[city_name] + 1
+
+                # Case for first appearance of a city
+                else:
+                    city_dict[city_name] = 1
+
+        for city_list in destination_city_list:
+            for city_name in city_list:
+
+                # Case that city already occurs
+                if city_name in city_dict:
+                    city_dict[city_name] = city_dict[city_name] + 1
+
+                # Case for first appearance of a city
+                else:
+                    city_dict[city_name] = 1
+
+        relevant_city_list = []
+        # Print the abundance of all cities
+        for key, value in city_dict.items():
+            if value >= 20 and (key != "Sylt"):
+                print(key, value)
+                relevant_city_list.append(key)
+
+        # Determine all possible city combinations
+        for city in relevant_city_list:
+            for city_2 in relevant_city_list:
+
+                # Irrelevant case
+                if city == city_2:
+                    continue
+                else:
+                    name_constallation = [city, city_2]
+                    name_constallation.sort()
+                    self.relevant_city_combination_dict[name_constallation[0] + "$" + name_constallation[1]] = 0
+
+        # Check in the tweets how often the constellation occur and increment the values in the dict
+        self.short_tweet_df["hometowns"] = self.short_tweet_df.apply(
+            lambda x: self.assign_tweet_text_to_city_combination(x.hometowns, x.destinations, x.user_id), axis=1)
+
+        for key, value in self.relevant_city_combination_dict.items():
+            if value > 4:
+                print(key, value)
+
+        # Print the user that are interesting for the manual annotation
+        relevant_user_list = []
+        for key, value in self.relevant_user_dict.items():
+            relevant_user_list.append(key)
+
+        print("Number of relevant users:", len(relevant_user_list))
+        print(relevant_user_list)
 
 
 def main():
