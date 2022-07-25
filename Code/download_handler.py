@@ -296,10 +296,47 @@ class DownloadHandler:
                 # Append formatted tweet data to final list
                 tweet_data.append(current_tweet_data)
 
-        # Paginator version to pull up to 3200 tweets per user
-        """paginator = tweepy.Paginator(client.get_users_tweets, id=user.data.id, max_results=200)
-        for tweet in paginator.flatten(limit=3200):
-            print(tweet)"""
+        print("User history tweets pulled:", len(tweet_data))
+
+        return tweet_data
+
+    def pull_user_histories_deep(self, user_id_list, max_results):
+        """
+        Pulls the last x tweets of every user that is handed over in the user_id_list parameter. Retweets are
+        excluded from the analysis. The tweets are returned as python list.
+        :param user_id_list: List with the user_id's
+        :param max_results: maximum tweets puller per user, current cap 3200
+        :return: tweet_data
+        """
+
+        # Start client
+        client = tweepy.Client(bearer_token=self.bearer_token)
+
+        # Iterate trough the tweet ids
+        tweet_data = []  # Stores data of all tweets
+
+        for user_id in user_id_list:
+
+            paginator_response = tweepy.Paginator(client.get_users_tweets, id=user_id, max_results=max_results,
+                                                  exclude="retweets", end_time="2022-05-31T00:00:01Z",
+                                                  tweet_fields=["id", "created_at", "text"]).flatten(limit=max_results)
+
+            # Skip user that have not tweeted before the 9 euro ticket - skip to next loop run / user
+            if not paginator_response:
+                continue
+
+            # Extract data
+            for tweet in paginator_response:
+
+                # Create list with data of current tweet
+                current_tweet_data = [tweet.id, tweet.created_at, tweet.text.strip().replace("\n", " "), user_id]
+
+                # Format elements to list and replace potential false separators
+                current_tweet_data = list(map(lambda x: x.replace("$", "€"), list(map(str, current_tweet_data))))
+
+                # Append formatted tweet data to final list
+                # Tweet_id, tweet_Created_at, tweet_text, user_id
+                tweet_data.append(current_tweet_data)
 
         print("User history tweets pulled:", len(tweet_data))
 
@@ -343,19 +380,19 @@ def main():
 
     download_handler.save_tweets(tweets, columns)   # """
 
-    # User history pull
+    """# User history pull
     download_handler = DownloadHandler()
     key_location = "Data/config.ini"
     download_handler.read_config_file(key_location)
     download_handler.create_api_interface()
 
-    tweets = download_handler.pull_user_histories([1003746587842105346], verbosefunc=False, max_results=100)
+    tweets = download_handler.pull_user_histories_deep([1003746587842105346],  max_results=10)
 
     columns = ["tweet.id", "tweet.created_at", "tweet.text", "tweet.source", "tweet.retweet_count", "tweet.reply_count",
                "tweet.like_count", "tweet.quote_count", "tweet.hashtags", "tweet.lang", "user.id", "user.name",
                "user.location", "user.created_at", "place.id", "place.name", "place.country_code", "place.geo",
                "place.place_type"]
-
+"""
     #download_handler.save_tweets(tweets, columns)  # """
 
 

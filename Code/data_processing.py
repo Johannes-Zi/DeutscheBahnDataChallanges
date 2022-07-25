@@ -223,6 +223,7 @@ class DataProcessing:
 
         return user_id_list
 
+    @staticmethod
     def db_key_extraction(self, tweet_text):
         """
         Function determines if a tweet text is related to the deutsch bahn
