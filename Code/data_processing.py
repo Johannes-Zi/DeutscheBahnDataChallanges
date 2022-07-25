@@ -339,7 +339,7 @@ class DataProcessing:
 
         # Save tweets as csv file
         time = datetime.now().strftime("%d-%m-%Y_%H-%M")
-        #self.tweet_df.to_csv("Data/tweets_" + time + ".csv", sep="$")
+        self.tweet_df.to_csv("Data/tweets_" + time + ".csv", sep="$")
 
     def assign_tweet_text_to_city_combination(self, hometowns, destinations, user_id):
         """
