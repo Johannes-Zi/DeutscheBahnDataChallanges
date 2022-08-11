@@ -38,11 +38,11 @@ The following questions were evaluated:
 **&#8594;** After resolving not representative sentiments we could detect a consistent slightly sentiment shift towards 
 positive for 11 of the 12 city-city connections.
 
-**&#8594;** This resulted in the assumption that the 9€-Ticket has an positive impact on Twitter user, which actually use the 
+**&#8594;** This resulted in the assumption that the 9€-Ticket has a **positive impact** on Twitter user, which actually use the 
 ticket. 
 
 **&#8594;** Most of the negative tweets related to the 9€-Ticket are not related to travel routes or were tweeted by user
- with a bad DB-realted sentiment even before the 9€-Ticket release.
+ with a bad DB-related sentiment even before the 9€-Ticket release.
 
 
 ## How to use
