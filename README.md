@@ -6,12 +6,12 @@ Goethe University Frankfurt.
 
 ## Team Twitter Sentiment
 We focused on the **Twitter user sentiment development** during the corona crisis with focus on the **9€-Ticket**. 
-In more detail we compared the user sentiment before the 9€-Ticket and the sentiment during the 9€-Ticket in relation to
+In more detail we compared the user sentiment before the 9€-Ticket and the sentiment during the 9€-Ticket for
 strong represented railway routes in Germany. 
 
 The following questions were evaluated:
 * What impact has the 9€-Ticket on the sentiment of DB customers?
-* Is the customer sentiment related to the geo-location?
+* Is the customer sentiment related to specific geo-locations?
 * Is there a connection between the €9 ticket and the sentiment on certain railway lines?
 
 ## Workflow
